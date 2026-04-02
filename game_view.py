@@ -7,7 +7,11 @@ class GameView(arcade.View):
         """ Handles what to do when this view is created """
         super().__init__()
 
-        
+        self.tilemap:arcade.TileMap = None
+        self.player:arcade.Sprite = None
+        self.player_list:arcade.SpriteList = None
+        self.spawnpoints:list = None
+        self.camera:arcade.Camera2D = None
         
         
     # 
@@ -15,7 +19,15 @@ class GameView(arcade.View):
     def on_show_view(self):
         """ Handles what to do when the window switches to this view """
         self.background_color = arcade.color.AMAZON
-        
+        self.tilemap = arcade.TileMap("Assets/tilemaps/mymap.tmx")
+        self.spawnpoints = [tile.position for tile in self.tilemap.sprite_lists["Spawns"]]
+
+        self.player = arcade.Sprite(":resources:/gui_basic_assets/checkbox/blue_check.png", 0.5)
+        self.player.position = self.spawnpoints[0]
+        self.player_list = arcade.SpriteList()
+        self.player_list.append(self.player)
+
+        self.camera = arcade.Camera2D(position=self.player.position)
     #
     #
     def on_hide_view(self):
@@ -28,6 +40,16 @@ class GameView(arcade.View):
         """ Handles drawing object each frame """
 
         self.clear()
+
+        self.camera.use()
+
+        for layer in self.tilemap.sprite_lists:
+            if layer == "Spawns":
+                continue
+            
+            self.tilemap.sprite_lists[layer].draw()
+
+        self.player_list.draw()
 
         
     #
