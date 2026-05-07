@@ -3,17 +3,28 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "",
+    "activeFile": "mymap.tmx",
     "expandedProjectPaths": [
+        "."
     ],
     "file.lastUsedOpenFilter": "All Files (*)",
     "fileStates": {
+        "mymap.tmx": {
+            "scale": 0.25,
+            "selectedLayer": 2,
+            "viewCenter": {
+                "x": 1288,
+                "y": 4198
+            }
+        },
         "spritesheet_tiles.tsx": {
             "scaleInDock": 1,
             "scaleInEditor": 1
         },
         "tiles.tsx": {
-            "dynamicWrapping": true
+            "dynamicWrapping": true,
+            "scaleInDock": 0.33,
+            "scaleInEditor": 1
         }
     },
     "last.imagePath": "C:/Users/justi/OneDrive/Documents/Arcade Game/Assets/racing-pack/PNG/Tiles/Asphalt road",
@@ -23,9 +34,13 @@
     "map.tileWidth": 128,
     "map.width": 100,
     "openFiles": [
+        "mymap.tmx",
+        "tiles.tsx"
     ],
     "project": "racetrack.tiled-project",
     "recentFiles": [
+        "tiles.tsx",
+        "mymap.tmx",
         "spritesheet_tiles.tsx"
     ],
     "tileset.lastUsedFormat": "tsx",
