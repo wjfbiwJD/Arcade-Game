@@ -9,7 +9,7 @@ pyglet.options.dpi_scaling = "real"
 #
 def main():
     """ Creates a Window for the game """
-    arcade.configure_logging(level=logging.DEBUG)
+    arcade.configure_logging(level=logging.INFO)
     logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s", filename="game.log", filemode="w")
     logger = logging.getLogger("arcade")
     logger.info("Initializing window")

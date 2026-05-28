@@ -42,6 +42,7 @@ class GameView(arcade.View):
         self.camera = arcade.Camera2D(position=self.player.position)
         self.physics = arcade.PymunkPhysicsEngine(damping=0.5, gravity=(0, 0))
         self.physics.add_sprite(self.player, mass=1, friction=0.6, collision_type="player", max_horizontal_velocity=600, max_vertical_velocity=600)
+        self.physics.add_sprite_list(self.tilemap.sprite_lists["Walls"], collision_type="wall", body_type=arcade.PymunkPhysicsEngine.STATIC)
     
         logger.info("Switched to GameView")
     #
@@ -65,8 +66,7 @@ class GameView(arcade.View):
 
             self.tilemap.sprite_lists[layer].draw()
 
-            if layer == "Walls":
-                self.tilemap.sprite_lists[layer].draw_hit_boxes()
+          
 
             
 
@@ -77,19 +77,41 @@ class GameView(arcade.View):
     #
     def on_update(self, delta_time):
         """ Handles updating objects each frame """
+        body = self.physics.get_physics_object(self.player).body
         
         if arcade.key.W in self.keys:
             angle_rads = math.radians(self.player.angle+90)
             fx = 1000 * math.cos(angle_rads)
             fy = 1000 * math.sin(angle_rads)
             logger.debug(f"Applying forward force ({fx}, {fy}) to player")
-            self.physics.apply_force(self.player, (fx, fy))
-        elif arcade.key.S in self.keys:
+            body.apply_force_at_local_point((fx, fy), (0, 0))
+
+        if arcade.key.S in self.keys:
             angle_rads = math.radians(self.player.angle+90)
             fx = 1000 * math.cos(angle_rads)
             fy = 1000 * math.sin(angle_rads)
             logger.debug(f"Applying backward force ({-fx}, {-fy}) to player")
-            self.physics.apply_force(self.player, (-fx, -fy))
+            body.apply_force_at_local_point((-fx, -fy), (0, 0))
+        if arcade.key.A in self.keys:
+            logger.debug("Rotating player left")
+            v = body.velocity
+
+            if v.x != 0 or v.y != 0:
+                body.angular_velocity -= math.radians(100)*delta_time
+        if arcade.key.D in self.keys:
+            logger.debug("Rotating player right")
+            v = body.velocity
+            if v.x != 0 or v.y != 0:
+                body.angular_velocity += math.radians(100)*delta_time
+
+        vx, vy = body.velocity
+        speed = math.hypot(vx, vy)
+        if speed > 0:
+            vel_angle = math.atan2(vy, vx)
+            facing_angle = math.radians(self.player.angle+90)
+            new_angle = vel_angle + (facing_angle - vel_angle) * 0.1
+            body.apply_force_at_local_point((speed * math.cos(new_angle), speed * math.sin(new_angle)), (0,0))
+
 
         self.physics.step(delta_time)
         self.camera.position = self.player.position
