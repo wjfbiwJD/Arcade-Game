@@ -2,6 +2,10 @@ import arcade
 import math
 import logging
 
+import car
+import tracking_car
+from constants import DAMPING, MASS, FRICTION, MAX_VELOCITY, SPEED, CAR_SCALE, TURN_SENSITIVITY
+
 logger = logging.getLogger("arcade")
 
 class GameView(arcade.View):
@@ -12,7 +16,7 @@ class GameView(arcade.View):
         super().__init__()
 
         self.tilemap:arcade.TileMap = None
-        self.player:arcade.Sprite = None
+        self.player:car.Car = None
         self.player_list:arcade.SpriteList = None
         self.spawnpoints:list = None
         self.camera:arcade.Camera2D = None
@@ -31,18 +35,20 @@ class GameView(arcade.View):
 
         }
         self.tilemap = arcade.TileMap("Assets/tilemaps/mymap.tmx", use_spatial_hash=True, layer_options=layer_options)
+        self.physics = arcade.PymunkPhysicsEngine(damping=DAMPING, gravity=(0, 0))
+        car.Car.set_physics_engine(self.physics)
         self.spawnpoints = [tile.position for tile in self.tilemap.sprite_lists["Spawns"]]
 
-        self.player = arcade.Sprite("Assets/racing-pack/PNG/Cars/car_black_1.png", 0.5)
+        self.player = tracking_car.TrackingCar("Assets/racing-pack/PNG/Cars/car_black_1.png", CAR_SCALE)
         self.player.position = self.spawnpoints[0]
         self.player_list = arcade.SpriteList()
         self.player_list.append(self.player)
 
         self.keys = set()
         self.camera = arcade.Camera2D(position=self.player.position)
-        self.physics = arcade.PymunkPhysicsEngine(damping=0.5, gravity=(0, 0))
-        self.physics.add_sprite(self.player, mass=1, friction=0.6, collision_type="player", max_horizontal_velocity=600, max_vertical_velocity=600)
+        self.physics.add_sprite(self.player, mass=MASS, friction=FRICTION, collision_type="player", max_horizontal_velocity=MAX_VELOCITY, max_vertical_velocity=MAX_VELOCITY)
         self.physics.add_sprite_list(self.tilemap.sprite_lists["Walls"], collision_type="wall", body_type=arcade.PymunkPhysicsEngine.STATIC)
+
     
         logger.info("Switched to GameView")
     #
@@ -77,43 +83,24 @@ class GameView(arcade.View):
     #
     def on_update(self, delta_time):
         """ Handles updating objects each frame """
-        body = self.physics.get_physics_object(self.player).body
-        
+        self.player.body.torque = 0
         if arcade.key.W in self.keys:
-            angle_rads = math.radians(self.player.angle+90)
-            fx = 1000 * math.cos(angle_rads)
-            fy = 1000 * math.sin(angle_rads)
-            logger.debug(f"Applying forward force ({fx}, {fy}) to player")
-            body.apply_force_at_local_point((fx, fy), (0, 0))
+
+            self.player.move_forward(SPEED)
 
         if arcade.key.S in self.keys:
-            angle_rads = math.radians(self.player.angle+90)
-            fx = 1000 * math.cos(angle_rads)
-            fy = 1000 * math.sin(angle_rads)
-            logger.debug(f"Applying backward force ({-fx}, {-fy}) to player")
-            body.apply_force_at_local_point((-fx, -fy), (0, 0))
+            self.player.move_backward(SPEED)        
+
         if arcade.key.A in self.keys:
-            logger.debug("Rotating player left")
-            v = body.velocity
-
-            if v.x != 0 or v.y != 0:
-                body.angular_velocity -= math.radians(100)*delta_time
-        if arcade.key.D in self.keys:
-            logger.debug("Rotating player right")
-            v = body.velocity
-            if v.x != 0 or v.y != 0:
-                body.angular_velocity += math.radians(100)*delta_time
-
-        vx, vy = body.velocity
-        speed = math.hypot(vx, vy)
-        if speed > 0:
-            vel_angle = math.atan2(vy, vx)
-            facing_angle = math.radians(self.player.angle+90)
-            new_angle = vel_angle + (facing_angle - vel_angle) * 0.1
-            body.apply_force_at_local_point((speed * math.cos(new_angle), speed * math.sin(new_angle)), (0,0))
-
-
+            #self.player.turn_left(TURN_SENSITIVITY)
+            self.player.body.torque = TURN_SENSITIVITY 
+            
+        elif arcade.key.D in self.keys:
+            #self.player.turn_right(TURN_SENSITIVITY)
+            self.player.body.torque = -TURN_SENSITIVITY 
+        self.player.body.angular_velocity *= DAMPING
         self.physics.step(delta_time)
+       
         self.camera.position = self.player.position
         
     #
@@ -127,7 +114,7 @@ class GameView(arcade.View):
     #
     def on_key_release(self, key: int, modifiers: int):
         """ Handles what to do when a key is released. See arcade.key """
-        self.keys.remove(key)
+        self.keys.discard(key)
         
     #
     #
