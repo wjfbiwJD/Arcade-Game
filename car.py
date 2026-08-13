@@ -1,5 +1,6 @@
 import arcade
 import math
+from constants import DAMPING, MIN_TURN_SPEED
 
 class Car(arcade.Sprite):
     physics_engine:arcade.PymunkPhysicsEngine = None        
@@ -26,8 +27,10 @@ class Car(arcade.Sprite):
         self.body = Car.physics_engine.get_physics_object(self).body
 
 
-    def move_forward(self, speed:float):
+    def move_forward(self, speed:float, boost:bool=False):
         """ Moves the car forward """
+        if boost:
+            speed *= 2
         self.radians = self.body.angle
         angle_rads = self.body.angle + math.pi/2
         fx = speed * math.cos(angle_rads)
@@ -39,22 +42,19 @@ class Car(arcade.Sprite):
 
         speed = math.hypot(self.body.velocity.x, self.body.velocity.y)
         
-        if speed > 10:
-            self.body.angular_velocity = math.radians(angle)
+        speed = max(1, speed)
+        torque_multiplier = max(0, min(1, (speed-MIN_TURN_SPEED)/(100-MIN_TURN_SPEED)))
+        self.body.torque += angle * torque_multiplier
         
-        else:
-            self.body.angular_velocity = 0
-
 
     def turn_right(self, angle:float):
         """ Turns the car right """
         speed = math.hypot(self.body.velocity.x, self.body.velocity.y)
         
-        if speed > 10:
-            self.body.angular_velocity = -math.radians(angle) 
-        
-        else:
-            self.body.angular_velocity = 0
+        speed = max(1, speed)
+        torque_multiplier = max(0, min(1, (speed-MIN_TURN_SPEED)/(100-MIN_TURN_SPEED)))
+        self.body.torque -= angle * torque_multiplier
+
     def move_backward(self, speed:float):
         """ Moves the car backward """
         self.radians = self.body.angle
@@ -76,3 +76,9 @@ class Car(arcade.Sprite):
             fwd_x * fwd_spd + -fwd_y * lateral_spd,
             fwd_y * fwd_spd + fwd_x * lateral_spd
         )
+
+        self.body.angular_velocity *= DAMPING
+
+    def ebrake(self, brake_force_multiplier:float=1):
+        opposite_force = -self.body.velocity * self.body.mass * brake_force_multiplier
+        self.body.apply_force_at_world_point(opposite_force, self.body.position)

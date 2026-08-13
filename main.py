@@ -16,6 +16,7 @@ def main():
 
     # The Window for this game
     window = arcade.Window(*arcade.get_display_size(), fullscreen=False)
+    window.set_update_rate(1/60)
     logger.info("Initializing game view")
     # A View inside of the Window
     game_view = GameView()

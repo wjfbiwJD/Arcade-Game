@@ -4,9 +4,13 @@ import logging
 
 import car
 import tracking_car
-from constants import DAMPING, MASS, FRICTION, MAX_VELOCITY, SPEED, CAR_SCALE, TURN_SENSITIVITY
+from action import Action
+from constants import DAMPING, MASS, FRICTION, MAX_VELOCITY, ACCELERATION, CAR_SCALE, TURN_SENSITIVITY, BRAKE_FORCE_MULTIPLIER
 
 logger = logging.getLogger("arcade")
+
+import os
+d = os.path.dirname(os.path.abspath(__file__))
 
 class GameView(arcade.View):
     """ Represents a view inside of a Window """
@@ -16,7 +20,7 @@ class GameView(arcade.View):
         super().__init__()
 
         self.tilemap:arcade.TileMap = None
-        self.player:car.Car = None
+        self.player:tracking_car.TrackingCar = None
         self.player_list:arcade.SpriteList = None
         self.spawnpoints:list = None
         self.camera:arcade.Camera2D = None
@@ -34,13 +38,14 @@ class GameView(arcade.View):
             }
 
         }
-        self.tilemap = arcade.TileMap("Assets/tilemaps/mymap.tmx", use_spatial_hash=True, layer_options=layer_options)
+        self.tilemap = arcade.TileMap(os.path.join(d, "Assets/tilemaps/mymap.tmx"), use_spatial_hash=True, layer_options=layer_options)
         self.physics = arcade.PymunkPhysicsEngine(damping=DAMPING, gravity=(0, 0))
         car.Car.set_physics_engine(self.physics)
         self.spawnpoints = [tile.position for tile in self.tilemap.sprite_lists["Spawns"]]
 
-        self.player = tracking_car.TrackingCar("Assets/racing-pack/PNG/Cars/car_black_1.png", CAR_SCALE)
+        self.player = tracking_car.TrackingCar(os.path.join(d, "Assets/racing-pack/PNG/Cars/car_black_1.png"), CAR_SCALE)
         self.player.position = self.spawnpoints[0]
+        self.start_point = self.player.position
         self.player_list = arcade.SpriteList()
         self.player_list.append(self.player)
 
@@ -83,31 +88,58 @@ class GameView(arcade.View):
     #
     def on_update(self, delta_time):
         """ Handles updating objects each frame """
-        self.player.body.torque = 0
         if arcade.key.W in self.keys:
+            if arcade.key.LSHIFT in self.keys:
+                self.player.move_forward(ACCELERATION, boost=True) 
+            else:   
+                self.player.move_forward(ACCELERATION)
 
-            self.player.move_forward(SPEED)
+        if arcade.key.SPACE in self.keys:
+            self.player.ebrake(BRAKE_FORCE_MULTIPLIER)
 
         if arcade.key.S in self.keys:
-            self.player.move_backward(SPEED)        
+            self.player.move_backward(ACCELERATION)        
 
         if arcade.key.A in self.keys:
-            #self.player.turn_left(TURN_SENSITIVITY)
-            self.player.body.torque = TURN_SENSITIVITY 
+            self.player.turn_left(TURN_SENSITIVITY)
             
         elif arcade.key.D in self.keys:
-            #self.player.turn_right(TURN_SENSITIVITY)
-            self.player.body.torque = -TURN_SENSITIVITY 
-        self.player.body.angular_velocity *= DAMPING
+            self.player.turn_right(TURN_SENSITIVITY)
+
+
+        self.player.end_frame()
+        if self.player.replay_movements:
+            self.player.update(delta_time)
         self.physics.step(delta_time)
-       
+
+
         self.camera.position = self.player.position
+        angle = math.degrees(-self.player.body.angle) % 360
+
+        if self.camera.angle < 180 and angle > 270:
+            angle -= 360
+        elif self.camera.angle > 270 and angle < 90:
+            angle += 360
+            
+        self.camera.angle = arcade.math.lerp(self.camera.angle, angle, 0.1)
         
     #
     #
     def on_key_press(self, key: int, modifiers: int):
         """ Handles what to do when a key is initially pressed """
         self.keys.add(key)
+
+        if arcade.key.F == key:
+            filename = os.path.join(d, "Data", "paths", "path1.json")
+            self.player.save_movements(filename)
+
+        elif arcade.key.L == key:
+            filename = os.path.join(d, "Data", "paths", "path1.json")
+            self.player.load_movements(filename)
+            self.physics.set_position(self.player, self.start_point)
+            self.physics.set_rotation(self.player, 0)
+            self.physics.set_velocity(self.player, (0, 0))
+            self.physics.set_horizontal_velocity(self.player, 0)
 
     #
     #
