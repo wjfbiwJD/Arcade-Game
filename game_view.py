@@ -1,7 +1,9 @@
 import arcade
+import arcade.gui
 import math
 import logging
 
+import ai_car
 import car
 import tracking_car
 from action import Action
@@ -49,12 +51,27 @@ class GameView(arcade.View):
         self.player_list = arcade.SpriteList()
         self.player_list.append(self.player)
 
+        aicar1 = ai_car.AICar(os.path.join(d, "Assets/racing-pack/PNG/Cars/car_red_1.png"), CAR_SCALE)
+        aicar1.position = self.spawnpoints[1]
+        self.player_list.append(aicar1)
+
         self.keys = set()
         self.camera = arcade.Camera2D(position=self.player.position)
-        self.physics.add_sprite(self.player, mass=MASS, friction=FRICTION, collision_type="player", max_horizontal_velocity=MAX_VELOCITY, max_vertical_velocity=MAX_VELOCITY)
+        for car_ in self.player_list:
+            self.physics.add_sprite(car_, mass=MASS, friction=FRICTION, collision_type="player", max_horizontal_velocity=MAX_VELOCITY, max_vertical_velocity=MAX_VELOCITY)
         self.physics.add_sprite_list(self.tilemap.sprite_lists["Walls"], collision_type="wall", body_type=arcade.PymunkPhysicsEngine.STATIC)
 
-    
+        self.ui_manager = arcade.gui.UIManager()
+        self.ui_manager.enable()
+        self.ui_layout = arcade.gui.UIBoxLayout(space_between=20)
+
+        resume_button = arcade.gui.UIFlatButton(text="Resume", width=max(200, self.window.width // 8))
+        self.ui_layout.add(resume_button)
+        @resume_button.event("on_click")
+        def on_click_resume(event):
+            self.toggle_gui()
+
+        self.ui_manager
         logger.info("Switched to GameView")
     #
     #
@@ -83,6 +100,8 @@ class GameView(arcade.View):
 
         self.player_list.draw()
 
+        self.ui_manager.draw()
+
         
     #
     #
@@ -108,8 +127,10 @@ class GameView(arcade.View):
 
 
         self.player.end_frame()
-        if self.player.replay_movements:
-            self.player.update(delta_time)
+        for car in self.player_list:
+            if car.replay_movements:
+                car.update(delta_time)
+            
         self.physics.step(delta_time)
 
 
@@ -140,6 +161,9 @@ class GameView(arcade.View):
             self.physics.set_rotation(self.player, 0)
             self.physics.set_velocity(self.player, (0, 0))
             self.physics.set_horizontal_velocity(self.player, 0)
+
+        elif arcade.key.ESCAPE == key:
+            self.toggle_gui()
 
     #
     #
@@ -184,7 +208,11 @@ class GameView(arcade.View):
         """ Handles what to do when the mouse leaves the window area """
         
         
-        
+    def toggle_gui(self):
+        if self.ui_manager.is_enabled():
+            self.ui_manager.disable()
+        else:
+            self.ui_manager.enable()
         
         
 if __name__ == "__main__":

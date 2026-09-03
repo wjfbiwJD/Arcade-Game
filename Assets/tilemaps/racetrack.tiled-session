@@ -3,19 +3,27 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "mymap.tmx",
+    "activeFile": "numbers.tsx",
     "expandedProjectPaths": [
         "."
     ],
     "file.lastUsedOpenFilter": "All Files (*)",
     "fileStates": {
+        "Hitboxes.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
         "mymap.tmx": {
-            "scale": 0.25,
-            "selectedLayer": 2,
+            "scale": 0.125,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 1288,
-                "y": 4198
+                "x": 5440,
+                "y": 6220
             }
+        },
+        "numbers.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
         },
         "spritesheet_tiles.tsx": {
             "scaleInDock": 1,
@@ -27,7 +35,7 @@
             "scaleInEditor": 1
         }
     },
-    "last.imagePath": "C:/Users/justi/OneDrive/Documents/Arcade Game/Assets/racing-pack/hitboxes/hitboxes",
+    "last.imagePath": "C:/Users/justi/OneDrive/Documents/Arcade Game/Assets/numbers",
     "map.height": 100,
     "map.lastUsedFormat": "tmx",
     "map.tileHeight": 128,
@@ -35,12 +43,16 @@
     "map.width": 100,
     "openFiles": [
         "mymap.tmx",
-        "tiles.tsx"
+        "tiles.tsx",
+        "Hitboxes.tsx",
+        "numbers.tsx"
     ],
     "project": "racetrack.tiled-project",
     "recentFiles": [
-        "tiles.tsx",
         "mymap.tmx",
+        "tiles.tsx",
+        "Hitboxes.tsx",
+        "numbers.tsx",
         "spritesheet_tiles.tsx"
     ],
     "tileset.lastUsedFormat": "tsx",
