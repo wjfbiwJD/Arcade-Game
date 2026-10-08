@@ -3,7 +3,9 @@ import arcade.gui
 import math
 import logging
 
-import ai_car
+import pymunk
+
+from ai_car_list import AICarList
 import car
 import tracking_car
 from action import Action
@@ -59,9 +61,9 @@ class GameView(arcade.View):
         self.player_list = arcade.SpriteList()
         self.player_list.append(self.player)
 
-        aicar1 = ai_car.AICar(os.path.join(d, "Assets/racing-pack/PNG/Cars/car_red_1.png"), CAR_SCALE, checkpoints=self.checkpoints)
-        aicar1.position = self.spawnpoints[1]
-        self.player_list.append(aicar1)
+        # Modification #2
+        self.ai_cars = AICarList(3, self.checkpoints, os.path.join(d, "Assets/racing-pack/PNG/Cars/car_red_1.png"), CAR_SCALE)
+        
 
         self.keys = set()
         self.camera = arcade.Camera2D(position=self.player.position)
@@ -69,17 +71,19 @@ class GameView(arcade.View):
             self.physics.add_sprite(car_, mass=MASS, friction=FRICTION, collision_type="player", max_horizontal_velocity=MAX_VELOCITY, max_vertical_velocity=MAX_VELOCITY)
         self.physics.add_sprite_list(self.tilemap.sprite_lists["Walls"], collision_type="wall", body_type=arcade.PymunkPhysicsEngine.STATIC)
 
+
         self.ui_manager = arcade.gui.UIManager()
         self.ui_manager.enable()
         self.ui_manager_is_enabled = True
         self.ui_layout = arcade.gui.UIAnchorLayout()
 
-        resume_button = arcade.gui.UIFlatButton(text="Resume", width=max(200, self.window.width // 8), y=self.center_y + 200)
+        resume_button = arcade.gui.UIFlatButton(text="Resume", width=max(200, self.window.width // 8), y=200)
         self.ui_layout.add(resume_button)
         @resume_button.event("on_click")
         def on_click_resume(event):
             self.toggle_gui()
-        start_button = arcade.gui.UIFlatButton(text="Start", width=max(200, self.window.width // 8))
+
+        start_button = arcade.gui.UIFlatButton(text="Start", width=max(200, self.window.width // 8), y=0)
         self.ui_layout.add(start_button)
 
         self.ui_manager.add(self.ui_layout)
@@ -143,6 +147,8 @@ class GameView(arcade.View):
         for car in self.player_list:
             if car.replay_movements:
                 car.update(delta_time)
+
+        self.ai_cars.eval_generation()
             
         self.physics.step(delta_time)
 
@@ -184,6 +190,10 @@ class GameView(arcade.View):
     def on_key_release(self, key: int, modifiers: int):
         """ Handles what to do when a key is released. See arcade.key """
         self.keys.discard(key)
+        if key == arcade.key.F:
+            self.spawn_ai_cars()
+        elif key == arcade.key.T:
+            self.player.replay_movements = not self.player.replay_movements
         
     #
     #
@@ -227,7 +237,30 @@ class GameView(arcade.View):
         else:
             self.ui_layout.visible = True
         self.ui_manager_is_enabled = not self.ui_manager_is_enabled
-        
+
+
+    # Modification #4
+    def spawn_ai_cars(self):
+        if len(self.ai_cars) == 0:
+            self.ai_cars.generate_cars(self.spawnpoints[1])
+            self.player_list.extend(self.ai_cars)
+            for c in self.ai_cars:
+                self.physics.add_sprite(c, 
+                                        mass=MASS, 
+                                        friction=FRICTION, 
+                                        collision_type="ai_car", 
+                                        max_horizontal_velocity=MAX_VELOCITY, 
+                                        max_vertical_velocity=MAX_VELOCITY)
+                # Disable collisions between other AI cars
+                obj = self.physics.get_physics_object(c)
+                obj.shape.filter = pymunk.ShapeFilter(1)
+
+        else:
+            for c in self.ai_cars:
+                
+                
+                c.reset(self.spawnpoints[1], 0)
+            
         
 if __name__ == "__main__":
     import main

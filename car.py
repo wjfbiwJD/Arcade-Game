@@ -17,15 +17,14 @@ class Car(arcade.Sprite):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
 
+        
         if Car.physics_engine is None:
-            raise ValueError("Physics engine not set for Car class. Call Car.set_physics_engine() before creating instances.")
+            raise ValueError("Physics engine not set for Car class. Call Car.set_physics_engine() before creating instances.")        
         
     def init_body(self):
         
         self.body = Car.physics_engine.get_physics_object(self).body
-
 
     def move_forward(self, speed:float, boost:bool=False):
         """ Moves the car forward """
