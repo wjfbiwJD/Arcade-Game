@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.10" tiledversion="1.11.2" name="Hitboxes" tilewidth="128" tileheight="128" tilecount="25" columns="0">
+<tileset version="1.10" tiledversion="1.11.2" name="Hitboxes" tilewidth="128" tileheight="128" tilecount="29" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="0">
   <image source="../racing-pack/hitboxes/hitboxes/road_asphalt07.png" width="128" height="128"/>
@@ -75,5 +75,17 @@
  </tile>
  <tile id="24">
   <image source="../racing-pack/hitboxes/hitboxes/road_asphalt67.png" width="128" height="128"/>
+ </tile>
+ <tile id="25">
+  <image source="../racing-pack/hitboxes/hitboxes/down.png" width="128" height="128"/>
+ </tile>
+ <tile id="26">
+  <image source="../racing-pack/hitboxes/hitboxes/left.png" width="128" height="128"/>
+ </tile>
+ <tile id="27">
+  <image source="../racing-pack/hitboxes/hitboxes/right.png" width="128" height="128"/>
+ </tile>
+ <tile id="28">
+  <image source="../racing-pack/hitboxes/hitboxes/road_asphalt43.png" width="128" height="128"/>
  </tile>
 </tileset>

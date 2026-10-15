@@ -22,7 +22,7 @@ class AICarList(arcade.SpriteList):
     def generate_cars(self, spawnpoint: tuple[int, int] =(0, 0)):
         self.spawnpoint = spawnpoint
         for car in range(self.num_cars):
-            self.append(AICar(self.cur_checkpoint, self.checkpoints, self.image_filename, scale=self.scale, position=spawnpoint))
+            self.append(AICar(self.cur_checkpoint, self.checkpoints, self.image_filename, scale=self.scale, position=spawnpoint, num_movements=10000))
 
 
     def eval_generation(self):

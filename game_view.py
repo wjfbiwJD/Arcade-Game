@@ -181,6 +181,9 @@ class GameView(arcade.View):
             self.physics.set_velocity(self.player, (0, 0))
             self.physics.set_horizontal_velocity(self.player, 0)
 
+        elif arcade.key.T == key:
+            self.ai_cars.debug_print()
+
         elif arcade.key.ESCAPE == key:
             self.toggle_gui()
 
