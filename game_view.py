@@ -196,7 +196,7 @@ class GameView(arcade.View):
         if key == arcade.key.F:
             self.spawn_ai_cars()
         elif key == arcade.key.T:
-            self.player.replay_movements = not self.player.replay_movements
+            self.ai_cars.debug_print()
         
     #
     #
@@ -242,7 +242,6 @@ class GameView(arcade.View):
         self.ui_manager_is_enabled = not self.ui_manager_is_enabled
 
 
-    # Modification #4
     def spawn_ai_cars(self):
         if len(self.ai_cars) == 0:
             self.ai_cars.generate_cars(self.spawnpoints[1])

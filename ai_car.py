@@ -10,8 +10,7 @@ logger = logging.getLogger("arcade")
 class AICar(TrackingCar):
     counter = 0
 
-    # Modification #1
-    def __init__(self, cur_checkpoint, checkpoints, *args, num_movements=100, position=None, **kwargs):
+    def __init__(self, cur_checkpoint, checkpoints, *args, num_movements=1000, position=None, **kwargs):
         super().__init__(*args, **kwargs)
         
         if checkpoints is None:
@@ -52,14 +51,12 @@ class AICar(TrackingCar):
             
             yield frame 
 
-    # Modification #6
     def check_checkpoint(self):
         if str(self.cur_checkpoint) in self.checkpoints:
             if self.check_distance() < self.checkpoints["0"][0].width:
                 self.cur_checkpoint += 1
                 if str(self.cur_checkpoint) not in self.checkpoints:
                     self.cur_checkpoint = int(min(self.checkpoints.keys()))
-                print("New checkpoint:", self.cur_checkpoint)
                 return True
         return False
 
@@ -73,12 +70,12 @@ class AICar(TrackingCar):
             return min_distance
         return float('inf')  # Return infinity if no current checkpoint
 
-    # Modification #7
-    def reset(self, position_to_reset_to=(0,0), angle_to_reset_to=0):
+    def reset(self, position_to_reset_to=(0,0), angle_to_reset_to=0, new_movements=None):
         """ Resets the car to a given position and resets its checkpoint """
         self.rng.setstate(self.initial_state)  # Reset the random number generator to iawts initial state
-        self.movements = [k for k in self.recorded_movements]
-        self.recorded_movements.clear()
+        if new_movements is not None:
+            self.movements = new_movements                 # Added this
+            self.recorded_movements.clear()
 
         self.cur_checkpoint = 0
         self.replay_movements = True
@@ -93,6 +90,3 @@ class AICar(TrackingCar):
         super().update(delta_time)
         if self.check_checkpoint():
             logger.info(f"AI Car #{self.car_number} reached checkpoint {self.cur_checkpoint}.")
-
-
-    

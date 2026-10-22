@@ -3,7 +3,7 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "numbers.tsx",
+    "activeFile": "Hitboxes.tsx",
     "expandedProjectPaths": [
         "."
     ],
@@ -14,11 +14,11 @@
             "scaleInEditor": 1
         },
         "mymap.tmx": {
-            "scale": 0.125,
-            "selectedLayer": 3,
+            "scale": 0.5,
+            "selectedLayer": 2,
             "viewCenter": {
-                "x": 5440,
-                "y": 6220
+                "x": 6718,
+                "y": 4405
             }
         },
         "numbers.tsx": {
@@ -51,8 +51,8 @@
     "recentFiles": [
         "mymap.tmx",
         "tiles.tsx",
-        "Hitboxes.tsx",
         "numbers.tsx",
+        "Hitboxes.tsx",
         "spritesheet_tiles.tsx"
     ],
     "tileset.lastUsedFormat": "tsx",

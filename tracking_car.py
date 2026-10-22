@@ -72,6 +72,10 @@ class TrackingCar(Car):
                     self.ebrake(BRAKE_FORCE_MULTIPLIER)
             if self.record_movements:
                 self.end_frame()  # End the frame after processing all actions
+        else:
+            self.replay_movements = False
+            self.record_movements = False
+            self.movements = []                                                     # Added this
 
     def ebrake(self, brake_force_multiplier:float=BRAKE_FORCE_MULTIPLIER):
         """ Applies an emergency brake to the car """
