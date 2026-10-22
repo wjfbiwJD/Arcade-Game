@@ -23,14 +23,19 @@ class AICar(TrackingCar):
             self.position = position
 
         self.replay_movements = True  # AI car always replays movements
-        self.record_movements = True # AI car always records movements
+        self.record_movements = True # AI car always records movements unless stuck
         self.num_movements = num_movements
+        self.last_position = self.position
+        self.stuck_frames = 0
+        self.stuck_threshold = 600  # Number of frames before considering the car stuck
 
         self.movements = self.generate_movements(num_movements)  # Generate movements for 1000 frames
         self.rng = random.Random(AICar.counter)
         self.initial_state = self.rng.getstate()
         self.car_number = AICar.counter
         AICar.counter += 1
+
+        self._debug_text = None
 
     def generate_movements(self, num_frames: int):
         """ Generates random movements for the AI car """
@@ -72,9 +77,9 @@ class AICar(TrackingCar):
 
     def reset(self, position_to_reset_to=(0,0), angle_to_reset_to=0, new_movements=None):
         """ Resets the car to a given position and resets its checkpoint """
-        self.rng.setstate(self.initial_state)  # Reset the random number generator to iawts initial state
+        self.rng.setstate(self.initial_state)
         if new_movements is not None:
-            self.movements = new_movements                 # Added this
+            self.movements = new_movements
             self.recorded_movements.clear()
 
         self.cur_checkpoint = 0
@@ -90,3 +95,16 @@ class AICar(TrackingCar):
         super().update(delta_time)
         if self.check_checkpoint():
             logger.info(f"AI Car #{self.car_number} reached checkpoint {self.cur_checkpoint}.")
+
+        if self._debug_text is not None:
+            self._debug_text.x = self.position[0]
+            self._debug_text.y = self.position[1] + 20
+
+        if arcade.math.get_distance(*self.position, *self.last_position) < 1:
+            self.stuck_frames += 1
+            if self.stuck_frames > self.stuck_threshold:
+                logger.info(f"AI Car #{self.car_number} is stuck for {self.stuck_frames} frames.")
+                self.replay_movements = False  # Stop replaying movements when stuck
+        else:
+            self.stuck_frames = 0  # Reset stuck frames if the car has moved
+        self.last_position = self.position

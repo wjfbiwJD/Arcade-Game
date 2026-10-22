@@ -1,8 +1,12 @@
 import arcade
 import random
 from ai_car import AICar
-import ai_car
 from constants import CAR_SCALE
+from pyglet.graphics import Batch
+import logging
+
+logger = logging.getLogger("arcade")
+
 
 class AICarList(arcade.SpriteList):
 
@@ -14,7 +18,7 @@ class AICarList(arcade.SpriteList):
                  cur_checkpoint: int=0, 
                  scale: float=CAR_SCALE, 
                  spawnpoint: tuple[int, int]=None, 
-                 movements_per_iteration: int=1000,
+                 movements_per_iteration: int=15000,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.num_cars = num_cars
@@ -27,8 +31,11 @@ class AICarList(arcade.SpriteList):
 
         self.generation = 0
         self.best_movements = None
-        self.movements_per_iteration = movements_per_iteration
+        self.best_progress = 0.0
+        self.generations_without_improvement = 0
 
+        self.movements_per_iteration = movements_per_iteration
+        self.car_text_batch = Batch()
 
     def _get_ordered_checkpoint_keys(self) -> list:
         """Return checkpoint keys ordered numerically (as strings) when possible."""
@@ -55,7 +62,7 @@ class AICarList(arcade.SpriteList):
             distances.append(arcade.math.get_distance(*a, *b))
         return distances
 
-    def _get_checkpoint_average_position(self, sprite_list: arcade.SpriteList) -> tuple[float, float]:                 # Added this
+    def _get_checkpoint_average_position(self, sprite_list: arcade.SpriteList) -> tuple[float, float]:
         """ Returns the average position of a given sprite list. Returns (0,0) for empty lists. """
         x = 0.0
         y = 0.0
@@ -75,7 +82,9 @@ class AICarList(arcade.SpriteList):
     def generate_cars(self, spawnpoint: tuple[int, int] =(0, 0)):
         self.spawnpoint = spawnpoint
         for _ in range(self.num_cars):
-            self.append(AICar(self.cur_checkpoint, self.checkpoints, self.image_filename, scale=self.scale, position=spawnpoint, num_movements=self.movements_per_iteration))
+            car = AICar(self.cur_checkpoint, self.checkpoints, self.image_filename, scale=self.scale, position=spawnpoint, num_movements=self.movements_per_iteration)
+            car._debug_text = arcade.Text(f"Car #{car.car_number}", car.position[0], car.position[1] + 20, arcade.color.WHITE, 12, batch=self.car_text_batch)
+            self.append(car)
 
 
     def _movements_to_list(self, movements_source) -> list:
@@ -104,85 +113,140 @@ class AICarList(arcade.SpriteList):
         return seq
 
     def eval_generation(self):
-        """ Evaluates if the current generation of AI cars has completed their movements and advances to the next generation if so.
-        Implements a simple genetic algorithm: elitism, selection from top performers, crossover and mutation.
-        """
-        all_done = len(self) > 0 and all(not car.replay_movements for car in self)
-        if not all_done:
+        """Evaluate the completed generation and create the next generation."""
+        if len(self) == 0 or not all(not car.replay_movements for car in self):
             return
 
         self.generation += 1
 
-        # Compute fitness for all cars
-        scored = [(car, self.get_progress(car)) for car in self]
-        scored.sort(key=lambda x: x[1], reverse=True)
+        population = sorted(self, key=self.get_progress, reverse=True)
+        best_car = population[0]
+        best_progress = self.get_progress(best_car)
 
-        best_car, best_progress = scored[0]
-        print(f"Best car on generation #{self.generation} is: Car #{best_car.car_number} with ~{best_progress}% progress.")
+        if best_progress > self.best_progress:
+            self.best_progress = best_progress
+            self.generations_without_improvement = 0
+        else:
+            self.generations_without_improvement += 1
 
-        population = [c for c, _ in scored]
-        fitnesses = [f for _, f in scored]
+        logger.info(
+            f"Best car on generation #{self.generation}: "
+            f"Car #{best_car.car_number} with {best_progress:.2f}% progress. "
+            f"Generations without improvement: "
+            f"{self.generations_without_improvement}"
+        )
 
-        # Parameters
-        population_size = len(population)
-        elite_count = max(1, population_size // 10)  # keep top 10% unchanged
-        parent_pool = max(2, population_size // 4)   # top 25% form parent pool
-        mutation_rate = 0.05
+        best_sequence = self._movements_to_list(
+            best_car.recorded_movements
+            if best_car.recorded_movements
+            else best_car.movements
+        )
 
-        # Prepare parent movement sequences
-        parent_seqs = [self._movements_to_list(p.recorded_movements if p.recorded_movements else p.movements) for p in population[:parent_pool]]
+        if self.generations_without_improvement >= 10:
+            preserved_fraction = 0.50
+            mutation_rate = 0.15
+        elif self.generations_without_improvement >= 5:
+            preserved_fraction = 0.65
+            mutation_rate = 0.10
+        else:
+            preserved_fraction = 0.75
+            mutation_rate = 0.05
 
-        # Replace population with new generation
-        new_sequences = []
+        completed_frames = len(best_car.recorded_movements)
+        mutation_start = int(completed_frames * (1.0 - preserved_fraction))
 
-        # Elitism: carry forward top performers unchanged
-        for i in range(elite_count):
-            new_sequences.append(self._movements_to_list(population[i].recorded_movements if population[i].recorded_movements else population[i].movements))
+        # Keep the best car's sequence completely unchanged.
+        best_car.reset(
+            self.spawnpoint,
+            0,
+            new_movements=[[action for action in frame] for frame in best_sequence]
+        )
 
-        # Helper to perform single-point crossover
-        def crossover(seq_a, seq_b):
-            if not seq_a or not seq_b:
-                return seq_a.copy() if seq_a else seq_b.copy()
-            point = random.randint(1, len(seq_a) - 1)
-            child = [frame.copy() for frame in (seq_a[:point] + seq_b[point:])]
-            return child
+        # Mutate copies for every other car.
+        for car in population[1:]:
+            child = [[action for action in frame] for frame in best_sequence]
 
-        # Generate remaining children
-        while len(new_sequences) < population_size:
-            a_idx = random.randrange(parent_pool)
-            b_idx = random.randrange(parent_pool)
-            # avoid identical parent pairing too often
-            if a_idx == b_idx and parent_pool > 1:
-                b_idx = (b_idx + 1) % parent_pool
-            parent_a = parent_seqs[a_idx]
-            parent_b = parent_seqs[b_idx]
-            child = crossover(parent_a, parent_b)
-            new_sequences.append(child)
+            self.mutate(
+                child,
+                car.rng,
+                mutation_start,
+                mutation_rate
+            )
 
-        # Assign new sequences to cars with mutation using each car's RNG for determinism
-        for car, seq in zip(population, new_sequences):
-            # mutate in-place
-            for fi in range(len(seq)):
-                frame = seq[fi]
-                for ai in range(len(frame)):
-                    if car.rng.random() < mutation_rate:
-                        frame[ai] = car.rng.choice([0, 1, 2, 3, 4, 5, 6])
-                # with small chance, occasionally add or remove an action from the frame
-                if car.rng.random() < (mutation_rate * 0.2):
-                    if car.rng.random() < 0.5 and len(frame) > 1:
-                        # remove a random action
-                        idx = car.rng.randrange(len(frame))
-                        frame.pop(idx)
-                    else:
-                        # add a random action
-                        frame.append(car.rng.choice([1, 2, 3, 4, 5, 6]))
-            car.reset(self.spawnpoint, 0, new_movements=seq)
+            car.reset(
+                self.spawnpoint,
+                0,
+                new_movements=child
+            )
 
-        # Recompute distances in case checkpoints changed (kept for safety)
         self.distances = self._get_distances_between_checkpoints()
+    
+    def mutate(self, seq, rng, start_index=0, mutation_rate=0.05):
+        """Mutates movement and steering while favoring controlled driving."""
 
-            
-    def get_progress(self, car: AICar) -> float:                 # Added this
+        start_index = max(0, min(start_index, len(seq)))
+
+        # Movement action probabilities favor forward driving.
+        movement_choices = [1, 1, 1, 1, 2, 2, 3]
+        steering_choices = [0, 4, 5]
+
+        # Mutate movement in continuous segments.
+        def mutate_movement():
+            i = start_index
+
+            while i < len(seq):
+                if rng.random() < mutation_rate:
+                    duration = rng.randint(8, 60)
+                    action = rng.choice(movement_choices)
+
+                    for j in range(i, min(i + duration, len(seq))):
+                        frame = seq[j]
+                        frame[:] = [a for a in frame if a not in (1, 2, 3, 6)]
+
+                        if action != 0:
+                            frame.append(action)
+
+                    i += duration
+                else:
+                    i += 1
+
+        # Introduce continuous steering segments independently of existing turns.
+        def mutate_steering():
+            i = start_index
+
+            while i < len(seq):
+                if rng.random() < mutation_rate * 2:
+                    duration = rng.randint(10, 35)
+                    action = rng.choice(steering_choices)
+
+                    for j in range(i, min(i + duration, len(seq))):
+                        frame = seq[j]
+                        frame[:] = [a for a in frame if a not in (4, 5)]
+
+                        if action != 0:
+                            frame.append(action)
+
+                    i += duration
+                else:
+                    i += 1
+
+        mutate_movement()
+        mutate_steering()
+
+        # Resolve incompatible actions and prevent idle frames.
+        for frame in seq[start_index:]:
+            if 6 in frame:
+                frame[:] = [6]
+            else:
+                frame[:] = [a for a in frame if a != 0]
+
+                if not any(a in (1, 2, 3) for a in frame):
+                    frame.append(1)
+
+                if not any(a in (4, 5) for a in frame):
+                    pass
+
+    def get_progress(self, car: AICar) -> float:
         """Returns a car's overall progress around the course as a percentage.
 
         Progress is computed by summing the traveled distance along completed segments
@@ -219,12 +283,3 @@ class AICarList(arcade.SpriteList):
         traveled = passed_length + (segment_length * frac)
         progress = (traveled / total_course_length) * 100.0
         return max(0.0, min(100.0, progress))
-
-
-    def debug_print(self):
-        """ Prints the current state of the AI cars for debugging purposes """
-        print(f"Generation: {self.generation}")
-        for car in self:
-            print(f"Car #{car.car_number}: Checkpoint {car.cur_checkpoint}, "
-                  f"Replay: {car.replay_movements}, Recorded Movements: {len(car.recorded_movements)}, Movements Remaining: {len(car.movements)}, "
-                  f"Progress: {self.get_progress(car):.2f}%")

@@ -62,7 +62,7 @@ class GameView(arcade.View):
         self.player_list.append(self.player)
 
         # Modification #2
-        self.ai_cars = AICarList(3, self.checkpoints, os.path.join(d, "Assets/racing-pack/PNG/Cars/car_red_1.png"), CAR_SCALE)
+        self.ai_cars = AICarList(30, self.checkpoints, os.path.join(d, "Assets/racing-pack/PNG/Cars/car_red_1.png"), CAR_SCALE)
         
 
         self.keys = set()
@@ -109,16 +109,11 @@ class GameView(arcade.View):
             if layer in ["Spawns", "WallsA"]:
                 continue
 
-            self.tilemap.sprite_lists[layer].draw()
-
-          
-
-            
+            self.tilemap.sprite_lists[layer].draw()            
 
         self.player_list.draw()
-
+        self.ai_cars.car_text_batch.draw()
         self.ui_manager.draw()
-
         
     #
     #
@@ -256,8 +251,6 @@ class GameView(arcade.View):
 
         else:
             for c in self.ai_cars:
-                
-                
                 c.reset(self.spawnpoints[1], 0)
             
         
