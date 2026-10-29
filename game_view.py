@@ -9,7 +9,7 @@ from ai_car_list import AICarList
 import car
 import tracking_car
 from action import Action
-from constants import DAMPING, MASS, FRICTION, MAX_VELOCITY, ACCELERATION, CAR_SCALE, TURN_SENSITIVITY, BRAKE_FORCE_MULTIPLIER
+from constants import DAMPING, MASS, FRICTION, MAX_VELOCITY, ACCELERATION, CAR_SCALE, TURN_SENSITIVITY, BRAKE_FORCE_MULTIPLIER, CAT_PLAYER, CAT_ENEMY, CAT_WALLS
 
 logger = logging.getLogger("arcade")
 
@@ -61,6 +61,8 @@ class GameView(arcade.View):
         self.player_list = arcade.SpriteList()
         self.player_list.append(self.player)
 
+        self.noclip = False
+
         # Modification #2
         self.ai_cars = AICarList(30, self.checkpoints, os.path.join(d, "Assets/racing-pack/PNG/Cars/car_red_1.png"), CAR_SCALE)
         
@@ -71,6 +73,9 @@ class GameView(arcade.View):
             self.physics.add_sprite(car_, mass=MASS, friction=FRICTION, collision_type="player", max_horizontal_velocity=MAX_VELOCITY, max_vertical_velocity=MAX_VELOCITY)
         self.physics.add_sprite_list(self.tilemap.sprite_lists["Walls"], collision_type="wall", body_type=arcade.PymunkPhysicsEngine.STATIC)
 
+        for wall in self.tilemap.sprite_lists["Walls"]:
+            wallshape = self.physics.get_physics_object(wall)
+            wallshape.shape.filter = pymunk.ShapeFilter(categories=CAT_WALLS, mask=CAT_ENEMY)
 
         self.ui_manager = arcade.gui.UIManager()
         self.ui_manager.enable()
@@ -182,9 +187,19 @@ class GameView(arcade.View):
         elif arcade.key.ESCAPE == key:
             self.toggle_gui()
 
-    #
-    #
-    #
+        elif arcade.key.N == key:
+            self.noclip = not self.noclip
+            if self.noclip:
+                for car_ in self.player_list:
+                    obj = self.physics.get_physics_object(car_)
+                    obj.shape.filter = pymunk.ShapeFilter(categories=CAT_PLAYER, mask=0)
+
+            else:
+                for car_ in self.player_list:
+                    obj = self.physics.get_physics_object(car_)
+                    obj.shape.filter = pymunk.ShapeFilter(categories=CAT_PLAYER, mask=CAT_ENEMY | CAT_WALLS)
+
+
     def on_key_release(self, key: int, modifiers: int):
         """ Handles what to do when a key is released. See arcade.key """
         self.keys.discard(key)
@@ -250,7 +265,7 @@ class GameView(arcade.View):
                                         max_vertical_velocity=MAX_VELOCITY)
                 # Disable collisions between other AI cars
                 obj = self.physics.get_physics_object(c)
-                obj.shape.filter = pymunk.ShapeFilter(1)
+                obj.shape.filter = pymunk.ShapeFilter(categories=CAT_ENEMY, mask=CAT_WALLS)
 
         else:
             for c in self.ai_cars:
