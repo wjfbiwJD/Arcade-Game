@@ -80,7 +80,9 @@ class GameView(arcade.View):
         self.ui_manager = arcade.gui.UIManager()
         self.ui_manager.enable()
         self.ui_manager_is_enabled = True
-        self.ui_layout = arcade.gui.UIAnchorLayout()
+        anchor_layout = arcade.gui.UIAnchorLayout()
+        self.ui_layout = arcade.gui.UIBoxLayout(align="center",vertical=True, space_between=20)
+        anchor_layout.add(self.ui_layout, anchor_x="center", anchor_y="center")
 
         resume_button = arcade.gui.UIFlatButton(text="Resume", width=max(200, self.window.width // 8), y=200)
         self.ui_layout.add(resume_button)
@@ -91,7 +93,19 @@ class GameView(arcade.View):
         start_button = arcade.gui.UIFlatButton(text="Start", width=max(200, self.window.width // 8), y=0)
         self.ui_layout.add(start_button)
 
-        self.ui_manager.add(self.ui_layout)
+        @start_button.event("on_click")
+        def on_click_start(event):
+            self.toggle_gui()
+            self.spawn_ai_cars()
+
+        exit_button = arcade.gui.UIFlatButton(text="Exit", width=max(200, self.window.width // 8), y=0)
+        self.ui_layout.add(exit_button)
+    
+        @exit_button.event("on_click")
+        def on_click_exit(event):
+            self.window.close()
+
+        self.ui_manager.add(anchor_layout)
         self.toggle_gui()
 
         logger.info("Switched to GameView")
@@ -169,9 +183,9 @@ class GameView(arcade.View):
         """ Handles what to do when a key is initially pressed """
         self.keys.add(key)
 
-        if arcade.key.F == key:
+        """ if arcade.key.F == key:
             filename = os.path.join(d, "Data", "paths", "path1.json")
-            self.player.save_movements(filename)
+            self.player.save_movements(filename) 
 
         elif arcade.key.L == key:
             filename = os.path.join(d, "Data", "paths", "path1.json")
@@ -182,9 +196,9 @@ class GameView(arcade.View):
             self.physics.set_horizontal_velocity(self.player, 0)
 
         elif arcade.key.T == key:
-            self.ai_cars.debug_print()
+            self.ai_cars.debug_print() """
 
-        elif arcade.key.ESCAPE == key:
+        if arcade.key.ESCAPE == key:
             self.toggle_gui()
 
         elif arcade.key.N == key:
@@ -203,10 +217,7 @@ class GameView(arcade.View):
     def on_key_release(self, key: int, modifiers: int):
         """ Handles what to do when a key is released. See arcade.key """
         self.keys.discard(key)
-        if key == arcade.key.F:
-            self.spawn_ai_cars()
-        elif key == arcade.key.T:
-            self.ai_cars.debug_print()
+       
         
     #
     #
